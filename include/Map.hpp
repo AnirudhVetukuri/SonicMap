@@ -56,7 +56,7 @@ public:
         size_t bucketIndex = getBucketIndex(key, segments[segmentIndex].size);
 
         Segment &segmentObj = segments[segmentIndex];
-        Bucket &bucketObj = segment.buckets[bucketIndex];
+        Bucket &bucketObj = segmentObj.buckets[bucketIndex];
 
         while (bucketObj.taken) {
             if (bucketObj.key == key) {
@@ -73,12 +73,13 @@ public:
         bucketObj.taken = true;
     }
 
+
     std::optional<V> get(const K& key) const {
         size_t segmentIndex = getSegmentIndex(key);
         size_t bucketIndex = getBucketIndex(key, segments[segmentIndex].size);
 
         const Segment &segmentObj = segments[segmentIndex];
-        const Bucket &bucketObj = segment.buckets[bucketIndex];
+        const Bucket &bucketObj = segmentObj.buckets[bucketIndex];
 
         while (bucketObj.taken) {
             if (bucketObj.key == key) {
@@ -92,20 +93,23 @@ public:
         return std::nullopt;
     }
 
+
     void remove(const K& key) {
         size_t segmentIndex = getSegmentIndex(key);
         size_t bucketIndex = getBucketIndex(key, segments[segmentIndex].size);
 
         Segment &segmentObj = segments[segmentIndex];
-        Bucket &bucketObj = segment.buckets[bucketIndex];
+        Bucket &bucketObj = segmentObj.buckets[bucketIndex];
 
-        while (bucketObj.occupied) {
+        while (bucketObj.taken) {
             if (bucketObj.key == key) {
-                bucketObj.occupied = false;
+                bucketObj.taken = false;
                 return;
             }
+
             bucketIndex = (bucketIndex + 1) % segmentObj.size;
             bucketObj = segmentObj.buckets[bucketIndex];
         }
     }
+
 };
