@@ -78,18 +78,15 @@ public:
         size_t segmentIndex = getSegmentIndex(key);
         size_t bucketIndex = getBucketIndex(key, segments[segmentIndex].size);
 
-        const Segment &segmentObj = segments[segmentIndex];
-        const Bucket &bucketObj = segmentObj.buckets[bucketIndex];
+        const Segment& segmentObj = segments[segmentIndex];
 
-        while (bucketObj.taken) {
-            if (bucketObj.key == key) {
-                return bucketObj.value;
+        while (segmentObj.buckets[bucketIndex].taken) {
+            if (segmentObj.buckets[bucketIndex].key == key) {
+                return segmentObj.buckets[bucketIndex].value;
             }
 
             bucketIndex = (bucketIndex + 1) % segmentObj.size;
-            bucketObj = segmentObj.buckets[bucketIndex];
         }
-
         return std::nullopt;
     }
 
