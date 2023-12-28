@@ -1,6 +1,6 @@
 #include <vector>
 #include <optional>
-#include "hash/xxhash.hpp"
+#include <xxhash.h>
 
 template <typename K, typename V>
 class HashMap {
