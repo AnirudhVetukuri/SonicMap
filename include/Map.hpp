@@ -2,6 +2,8 @@
 #include <optional>
 #include <shared_mutex>
 #include <xxhash.h>
+#include <functional>
+#include <mutex>
 
 template <typename K, typename V>
 class HashMap
@@ -18,7 +20,7 @@ private:
     {
         std::vector<Bucket> buckets;
         size_t size;
-        mutable std::shared_mutex mutex; // Shared mutex for the segment
+        mutable std::shared_mutex mutex;
 
         Segment(size_t segmentSize) : size(segmentSize)
         {
@@ -59,12 +61,17 @@ public:
         }
     }
 
+    size_t getNumSegments() const
+    {
+        return numSegments;
+    }
+
     void insert(const K &key, const V &value)
     {
         size_t segmentIndex = getSegmentIndex(key);
         Segment &segment = segments[segmentIndex];
 
-        std::unique_lock<std::shared_mutex> lock(segment.mutex); // Write lock
+        std::unique_lock<std::shared_mutex> lock(segment.mutex);
 
         size_t bucketIndex = getBucketIndex(key, segment.size);
         Bucket &bucket = segment.buckets[bucketIndex];
@@ -90,7 +97,7 @@ public:
         size_t segmentIndex = getSegmentIndex(key);
         const Segment &segment = segments[segmentIndex];
 
-        std::shared_lock<std::shared_mutex> lock(segment.mutex); // Read lock
+        std::shared_lock<std::shared_mutex> lock(segment.mutex);
 
         size_t bucketIndex = getBucketIndex(key, segment.size);
         while (segment.buckets[bucketIndex].taken)
@@ -109,7 +116,7 @@ public:
         size_t segmentIndex = getSegmentIndex(key);
         Segment &segment = segments[segmentIndex];
 
-        std::unique_lock<std::shared_mutex> lock(segment.mutex); // Write lock
+        std::unique_lock<std::shared_mutex> lock(segment.mutex);
 
         size_t bucketIndex = getBucketIndex(key, segment.size);
         Bucket &bucket = segment.buckets[bucketIndex];
@@ -132,14 +139,13 @@ public:
         Segment &segment = segments[segmentIndex];
 
         {
-            std::shared_lock<std::shared_mutex> lock(segment.mutex); // Read lock
+            std::shared_lock<std::shared_mutex> lock(segment.mutex);
             size_t bucketIndex = getBucketIndex(key, segment.size);
 
             while (segment.buckets[bucketIndex].taken)
             {
                 if (segment.buckets[bucketIndex].key == key)
                 {
-                    // Apply the update function
                     updateFunc(segment.buckets[bucketIndex].value);
                     return;
                 }
@@ -147,13 +153,11 @@ public:
             }
         }
 
-        // Upgrade to write lock if we need to insert
         if (valueToInsert.has_value())
         {
-            std::unique_lock<std::shared_mutex> lock(segment.mutex); // Write lock
+            std::unique_lock<std::shared_mutex> lock(segment.mutex);
             size_t bucketIndex = getBucketIndex(key, segment.size);
 
-            // Re-check if the key was inserted by another thread in the meantime
             while (segment.buckets[bucketIndex].taken)
             {
                 if (segment.buckets[bucketIndex].key == key)
@@ -164,7 +168,6 @@ public:
                 bucketIndex = (bucketIndex + 1) % segment.size;
             }
 
-            // Insert the new value
             segment.buckets[bucketIndex].key = key;
             segment.buckets[bucketIndex].value = *valueToInsert;
             segment.buckets[bucketIndex].taken = true;
