@@ -24,6 +24,7 @@ private:
     };
 
     size_t numSegments;
+    size_t segmentBits;
     std::vector<Segment> segments;
 
     size_t hashKey(const K& key) const {
@@ -34,7 +35,7 @@ private:
     size_t getSegmentIndex(const K& key) const {
         size_t hashValue = hashKey(key);
 
-        return hashValue % numSegments;
+        return (hashValue >> (64 - segmentBits)) % numSegments;
     }
 
     size_t getBucketIndex(const K& key, size_t segmentSize) const {
@@ -44,7 +45,17 @@ private:
     }
 
 public:
-    explicit HashMap(size_t segmentCount = 8, size_t segmentSize = 128) : numSegments(segmentCount) {
+    size_t getNumSegments() const {
+        return numSegments;
+    }
+
+    size_t testGetSegmentIndex(const K& key) const {
+        return getSegmentIndex(key);
+    }
+
+    explicit HashMap(size_t segmentCount = 8, size_t segmentSize = 128) : numSegments(segmentCount), segmentBits(0) {
+        while (segmentCount >>= 1) ++segmentBits;
+
         for (size_t i = 0; i < numSegments; ++i) {
 
             segments.emplace_back(segmentSize);
