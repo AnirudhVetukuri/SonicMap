@@ -27,6 +27,25 @@ TEST(HashMapTest, UpdateValue) {
     EXPECT_EQ(map.get(1), "Uno");
 }
 
+TEST(HashMapTest, Distribution) {
+    HashMap<int, int> map(8, 128);
+    size_t numKeys = 1000;
+
+    std::vector<size_t> counts(map.getNumSegments(), 0);
+    for (int i = 0; i < numKeys; ++i) {
+        map.insert(i, i);
+    }
+
+    for (int i = 0; i < numKeys; ++i) {
+        size_t segmentIndex = map.testGetSegmentIndex(i);
+        counts[segmentIndex]++;
+    }
+
+    for (size_t count : counts) {
+        EXPECT_NEAR(count, numKeys / map.getNumSegments(), numKeys * 0.1);
+    }
+}
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
